@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Локальное хранилище файлов</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        
+        body {
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #4a90e2;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            background-color: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
+            background-color: #e8f0fe;
+            border-color: #2c80e2;
+        }
+        
+        .upload-area.drag-over {
+            background-color: #d4edda;
+            border-color: #28a745;
+        }
+        
+        .upload-icon {
+            font-size: 40px;
+            color: #4a90e2;
+            margin-bottom: 10px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-input-label {
+            display: inline-block;
+            background: #4a90e2;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        
+        .file-input-label:hover {
+            background: #3a80d2;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .filter {
+            flex: 1;
+            min-width: 180px;
+        }
+        
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .files-list {
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        
+        .file-item {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .file-info h4 {
+            margin: 0 0 5px 0;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .file-details {
+            display: flex;
+            gap: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .delete-btn:hover {
+            background: #c82333;
+        }
+        
+        .clear-all {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            float: right;
+        }
+        
+        .clear-all:hover {
+            background: #5a6268;
+        }
+        
+        .empty-message {
+            text-align: center;
+            color: #6c757d;
+            padding: 40px;
+            font-size: 16px;
+        }
+        
+        .file-count {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 600px) {
+            .filters {
+                flex-direction: column;
+            }
+            
+            .file-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .file-actions {
+                margin-top: 10px;
+                width: 100%;
+            }
+            
+            .delete-btn {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📁 Локальное хранилище файлов</h1>
+
+        <div class="upload-area" id="dropZone">
+            <div class="upload-icon">⬆️</div>
+            <p>Перетащите файлы сюда или</p>
+            <label for="fileInput" class="file-input-label">
+                Выбрать файлы
+            </label>
+            <input type="file" id="fileInput" class="file-input" multiple>
+        </div>
+
+        <div class="filters">
+            <div class="filter">
+                <p>Тип файла:</p>
+                <select id="typeFilter">
+                    <option value="all">Все типы</option>
+                    <option value="image">Изображения</option>
+                    <option value="text">Текстовые</option>
+                    <option value="pdf">PDF</option>
+                    <option value="other">Другие</option>
+                </select>
+            </div>
+            
+            <div class="filter">
+                <p>Размер файла:</p>
+                <select id="sizeFilter">
+                    <option value="all">Все размеры</option>
+                    <option value="small">Меньше 100KB</option>
+                    <option value="medium">100KB - 1MB</option>
+                    <option value="large">Больше 1MB</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="files-list">
+            <div class="file-count" id="fileCount">Файлов: 0</div>
+            <div id="filesContainer">
+                <div class="empty-message" id="emptyMessage">
+                    📂 Нет загруженных файлов
+                </div>
+            </div>
+            
+            <button class="clear-all" id="clearAllBtn">
+                Удалить все файлы
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function loadFiles() {
+            const saved = localStorage.getItem('myFiles');
+            return saved ? JSON.parse(saved) : [];
+        }
+
+        function saveFiles(files) {
+            localStorage.setItem('myFiles', JSON.stringify(files));
+        }
+ 
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' Б';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' КБ';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' МБ';
+        }
+
+        function getFileType(type) {
+            if (type.startsWith('image/')) return 'image';
+            if (type.includes('text') || type.includes('document')) return 'text';
+            if (type.includes('pdf')) return 'pdf';
+            return 'other';
+        }
+
+        function getSizeCategory(size) {
+            if (size < 100 * 1024) return 'small';
+            if (size <= 1024 * 1024) return 'medium';
+            return 'large';
+        }
+
+        function displayFiles() {
+            const container = document.getElementById('filesContainer');
+            const emptyMessage = document.getElementById('emptyMessage');
+            const fileCount = document.getElementById('fileCount');
+
+            const typeFilter = document.getElementById('typeFilter').value;
+            const sizeFilter = document.getElementById('sizeFilter').value;
+
+            let files = loadFiles();
+            
+            if (typeFilter !== 'all') {
+                files = files.filter(file => getFileType(file.type) === typeFilter);
+            }
+            
+            if (sizeFilter !== 'all') {
+                files = files.filter(file => getSizeCategory(file.size) === sizeFilter);
+            }
+
+            fileCount.textContent = `Файлов: ${files.length}`;
+
+            if (files.length === 0) {
+                container.innerHTML = '<div class="empty-message">📂 Нет загруженных файлов</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            
+            files.forEach(file => {
+                const fileElement = document.createElement('div');
+                fileElement.className = 'file-item';
+                fileElement.innerHTML = `
+                    <div class="file-info">
+                        <h4>${file.name}</h4>
+                        <div class="file-details">
+                            <span>Тип: ${file.type || 'неизвестен'}</span>
+                            <span>Размер: ${formatSize(file.size)}</span>
+                            <span>Дата: ${file.date}</span>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="delete-btn" data-id="${file.id}">Удалить</button>
+                    </div>
+                `;
+                container.appendChild(fileElement);
+            });
+
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.onclick = function() {
+                    const id = this.getAttribute('data-id');
+                    deleteFile(id);
+                };
+            });
+        }
+
+        function addFile(file) {
+            const files = loadFiles();
+            
+            const newFile = {
+                id: Date.now() + Math.random(),
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                date: new Date().toLocaleDateString('ru-RU')
+            };
+            
+            files.push(newFile);
+            saveFiles(files);
+            displayFiles();
+
+            alert(`Файл "${file.name}" успешно загружен!`);
+        }
+
+        function deleteFile(id) {
+            if (!confirm('Удалить этот файл?')) return;
+            
+            let files = loadFiles();
+            files = files.filter(file => file.id != id);
+            saveFiles(files);
+            displayFiles();
+        }
+
+        function clearAllFiles() {
+            if (!confirm('Удалить все файлы?')) return;
+            
+            saveFiles([]);
+            displayFiles();
+        }
+
+        document.getElementById('fileInput').onchange = function(e) {
+            for (let file of e.target.files) {
+                addFile(file);
+            }
+            e.target.value = '';
+        };
+
+        const dropZone = document.getElementById('dropZone');
+        
+        dropZone.ondragover = function(e) {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        };
+        
+        dropZone.ondragleave = function() {
+            dropZone.classList.remove('drag-over');
+        };
+        
+        dropZone.ondrop = function(e) {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            
+            for (let file of e.dataTransfer.files) {
+                addFile(file);
+            }
+        };
+
+        dropZone.onclick = function() {
+            document.getElementById('fileInput').click();
+        };
+
+        document.getElementById('typeFilter').onchange = displayFiles;
+        document.getElementById('sizeFilter').onchange = displayFiles;
+
+        document.getElementById('clearAllBtn').onclick = clearAllFiles;
+
+        window.onload = function() {
+            displayFiles();
+ 
+            if (loadFiles().length === 0) {
+                const exampleFiles = [
+                    {
+                        id: 1,
+                        name: "пример.txt",
+                        type: "text/plain",
+                        size: 1024,
+                        date: new Date().toLocaleDateString('ru-RU')
+                    }
+                ];
+                saveFiles(exampleFiles);
+                displayFiles();
+            }
+        };
+    </script>
+</body>
+</html>
